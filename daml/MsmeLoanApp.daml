@@ -1,0 +1,101 @@
+-- this module query the contract key and enables loan application for the verfified MSMEs
+
+module MsmeLoanApp where
+
+--import Onboard
+--import Daml.Script
+
+template LoanApplication
+  with
+    msme_reference :Text
+    loan_amount : Int
+    collateral_type : Text
+    duration_months : Int
+    msme : Party
+    validator : Party
+  where
+    -- ensure loan_amount >= 0 && ensure duration_months > 0  && duration_months < 60
+    signatory msme
+    observer validator
+
+    -- key (company_name, assigner, checker) : (Text, Party, Party)
+    -- maintainer key._2
+
+    
+    controller validator can
+      VerifyAndApprov : ContractId LoanVerificationApproval
+        with 
+          propery_value :Int 
+          collateral_ratio : Decimal
+          credit_limit_ratio : Decimal
+          liquidity : Text
+          loan_tenure_months : Int
+        do
+          create LoanVerificationApproval
+           with 
+            propery_value  
+            collateral_ratio 
+            credit_limit_ratio 
+            liquidity
+            loan_tenure_months
+            ..
+    
+    controller validator can 
+      VerifyAndQuery: ContractId LoanVerificationQuery 
+        with
+          query : Text 
+        do  
+         create LoanVerificationQuery 
+            with 
+              query = query
+              ..
+
+template LoanVerificationQuery
+  with
+    msme_reference :Text
+    loan_amount : Int
+    collateral_type : Text
+    duration_months : Int
+    msme : Party
+    validator : Party
+    query : Text
+  where
+    signatory validator
+    observer msme
+  
+
+template LoanVerificationApproval
+  with
+    msme_reference :Text
+    loan_amount : Int
+    collateral_type : Text
+    msme : Party
+    validator : Party
+    propery_value :Int 
+    collateral_ratio : Decimal
+    credit_limit_ratio : Decimal
+    liquidity : Text
+    loan_tenure_months : Int
+  where
+    ensure collateral_ratio > 0.0 && collateral_ratio <= 1.0
+    signatory validator
+    observer msme
+    
+  
+  
+
+
+-- loanapp : Script (ContractId LoanApplication)
+-- loanapp = script do
+
+--   party <- allocateParty "MSME"
+--   xvalidator <- allocateParty "Validator"
+  
+--   submit party do
+--       createCmd LoanApplication with
+--         msme_reference :Text
+--         loan_amount : Int
+--         collateral_type : Text
+--         duration_months : Int
+--         msme : Party
+--         validator : Party

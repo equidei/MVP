@@ -1,0 +1,13 @@
+module UserAdmin where
+
+template ValidatorOnboard 
+  with 
+    userAdmin: Party 
+    validator_name: Party
+    validator_profession: Text 
+    validator_certificate_id : Text
+    validator_yrs_exp : Int
+  where 
+    signatory userAdmin
+    observer validator_name
+    ensure userAdmin /= validator_name

@@ -1,0 +1,16 @@
+sdk-version: 1.16.0
+name: onboarding
+version: 1.0.0
+source: daml
+parties:
+- MSME
+- Validator
+- UserAdmin
+- Validator1
+- Validator2
+- Validator3
+- Validator4
+dependencies:
+- daml-prim
+- daml-stdlib
+- daml-script

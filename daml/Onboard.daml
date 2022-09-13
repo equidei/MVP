@@ -1,0 +1,214 @@
+-- Copyright (c) 2019 Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+module Onboard where
+
+import Daml.Script
+import UserAdmin
+
+template MSMERegister
+  with
+    org_name : Text
+    year_incoporated : Int
+    industry : Text
+    license_no : Text
+    gst_num : Text
+    brands_produced : Text
+    address : Text
+    contact_num : Int
+    msme : Party
+    validator : Party
+  where    
+    signatory msme
+    observer validator
+    --ensure contact_num < 9999999999 && contact_num>1111111111
+
+    key (msme,gst_num) : (Party, Text)
+    maintainer key._1
+
+    controller validator can 
+      Verify_Onboard: () 
+        do return ()
+
+    controller validator can 
+      VerifyAndQuery: ContractId MSMEVerifyRegistry 
+        with
+          query : Text 
+        do  
+         create MSMEVerifyRegistry 
+            with 
+              query = query
+              ..
+            
+    
+template MSMEVerifyRegistry
+  with 
+    org_name : Text
+    year_incoporated : Int
+    industry : Text
+    license_no : Text
+    gst_num : Text
+    brands_produced : Text
+    address : Text
+    contact_num : Int
+    msme : Party
+    validator : Party
+    query : Text
+  where 
+    signatory validator
+    observer msme
+
+    controller msme can 
+       UpdateLicense: ContractId MSMERegister 
+         with
+           new_license_no : Text
+         do  
+           create MSMERegister
+            with 
+              license_no = new_license_no
+              ..
+
+    controller msme can 
+     UpdateGSTnum: ContractId MSMERegister 
+       with
+          new_gst_num : Text
+        do  
+         create MSMERegister 
+           with 
+              gst_num = new_gst_num
+              ..
+
+
+template ValidatorRegRequest
+   with 
+     userAdmin: Party 
+     validator_name: Party 
+     validator_profession: Text 
+     validator_certificate_id : Text
+     validator_yrs_exp : Int
+   where 
+     signatory validator_name
+     observer userAdmin
+     ensure validator_yrs_exp > 0
+
+     controller userAdmin can 
+      OnboardValidator: ContractId ValidatorOnboard 
+        with 
+        do
+        create ValidatorOnboard with ..
+ 
+onboarding : Script ()
+
+onboarding = script do
+
+  party <- allocateParty "MSME"
+  xvalidator <- allocateParty "Validator"
+  userAdmin <- allocateParty "MSME"
+  validator_name <- allocateParty "Validator1"
+  validator2 <- allocateParty "Validator2"
+  validator3 <- allocateParty "Validator3"
+  validator4 <- allocateParty "Validator4"
+
+  regreq <- 
+    submit party do
+       createCmd MSMERegister with
+        org_name = "LA LLP"
+        year_incoporated = 2014
+        industry = "Textile"
+        license_no = "ABGTtin46"
+        gst_num = "ABGTtin46"
+        brands_produced = "Col,aaa"
+        address = "St ame, city, State"
+        contact_num = 7418529630
+        msme = party
+        validator = xvalidator
+   
+  validatrRegRequest <- 
+    submit validator_name do
+      createCmd ValidatorRegRequest with
+        validator_profession = "CA"
+        validator_certificate_id = "741AGCA"
+        userAdmin = userAdmin
+        validator_name = validator_name
+        validator_yrs_exp = 20
+        
+  return()
+
+
+
+
+
+
+
+-- onboarding : Script (ContractId MSMERegister)
+-- onboarding : Script ()
+--   onboarding = script do
+
+--    msme <- allocateParty "MSME"
+--    validator <- allocateParty "Validator"
+  
+--   msmereg <- submit party do
+--       createCmd MSMERegister with
+--         company_name = "MSME LLP"
+--         year_incoporated = 2015
+--         industry = "Chemical"
+--         gst_num = "APBHF78950IN"
+--         msme = msme
+--         validator = validator
+
+--   Some newMsme <- queryContractId party msmereg
+--   assert (newMsme.gst_num == "APBHF78950IN")
+
+
+
+  
+-- -- module SimpleIou where
+
+-- -- import Daml.Script
+
+-- -- data Cash = Cash with
+-- --   currency : Text
+-- --   amount : Decimal
+-- --     deriving (Eq, Show)
+
+-- -- template SimpleIou
+-- --   with
+-- --     issuer : Party
+-- --     owner : Party
+-- --     cash : Cash
+-- --   where
+-- --     signatory issuer
+-- --     observer owner
+
+-- --     choice Transfer
+-- --       : ContractId SimpleIou
+-- --       with
+-- --         newOwner : Party
+-- --       controller owner
+-- --       do
+-- --         create this with owner = newOwner
+
+-- -- test_iou = script do
+-- --   alice <- allocateParty "Alice"
+-- --   bob <- allocateParty "Bob"
+-- --   charlie <- allocateParty "Charlie"
+-- --   dora <- allocateParty "Dora"
+
+-- --   -- Dora issues an Iou for $100 to Alice.
+-- --   iou <- submit dora do
+-- --     createCmd SimpleIou with
+-- --       issuer = dora
+-- --       owner = alice
+-- --       cash = Cash with
+-- --         amount = 100.0
+-- --         currency = "USD"
+
+-- --   -- Alice transfers it to Bob.
+-- --   iou2 <- submit alice do
+-- --     exerciseCmd iou Transfer with
+-- --       newOwner = bob
+
+-- --   -- Bob transfers it to Charlie.
+-- --   submit bob do
+-- --     exerciseCmd iou2 Transfer with
+-- --       newOwner = charlie
